@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鉛筆コロコロ伝説チャレンジ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #18181c;
+    --surface2: #222228;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #f0efe8;
+    --muted: #888880;
+    --hit: #4ade80;
+    --hit-bg: rgba(74,222,128,0.12);
+    --hit-border: rgba(74,222,128,0.35);
+    --miss: #f87171;
+    --miss-bg: rgba(248,113,113,0.10);
+    --miss-border: rgba(248,113,113,0.3);
+    --gold: #fbbf24;
+    --gold-bg: rgba(251,191,36,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Zen Maru Gothic', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+
+  /* ── header ── */
+  .header { text-align: center; margin-bottom: 2rem; }
+  .header-eyebrow {
+    font-family: 'DotGothic16', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+  h1 {
+    font-size: clamp(22px, 6vw, 34px);
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .header-sub {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .prob-badge {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: 'DotGothic16', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    background: var(--gold-bg);
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: 4px;
+    padding: 3px 10px;
+  }
+
+  /* ── panel ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 12px;
+  }
+
+  /* ── controls ── */
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0;
+  }
+  .ctrl-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+  .ctrl-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+  select, input[type="text"] {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: var(--gold); }
+
+  /* ── grid ── */
+  .grid {
+    display: grid;
+    gap: 6px;
+    margin: 16px 0;
+  }
+  .cell {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.18s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .cell.rolling { animation: pop 0.2s ease; }
+  @keyframes pop {
+    0%   { transform: scale(0.75); opacity: 0.4; }
+    60%  { transform: scale(1.08); }
+    100% { transform: scale(1);    opacity: 1;   }
+  }
+  .cell.hit {
+    background: var(--hit-bg);
+    border-color: var(--hit-border);
+    color: var(--hit);
+  }
+  .cell.miss {
+    background: var(--miss-bg);
+    border-color: var(--miss-border);
+    color: var(--miss);
+  }
+  .cell.idle { color: var(--muted); }
+
+  /* ── result box ── */
+  .result-box {
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 700;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: all 0.3s ease;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+  .result-box.legend {
+    background: rgba(74,222,128,0.1);
+    border-color: var(--hit-border);
+    color: var(--hit);
+    font-size: 17px;
+    animation: legendPulse 1s ease infinite alternate;
+  }
+  @keyframes legendPulse {
+    from { box-shadow: 0 0 0px rgba(74,222,128,0); }
+    to   { box-shadow: 0 0 24px rgba(74,222,128,0.25); }
+  }
+  .result-box.great {
+    background: rgba(251,191,36,0.1);
+    border-color: rgba(251,191,36,0.3);
+    color: var(--gold);
+  }
+  .result-box.fail {
+    background: var(--miss-bg);
+    border-color: var(--miss-border);
+    color: var(--miss);
+  }
+  .result-box.ok {
+    background: var(--surface2);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  /* ── buttons ── */
+  .btn-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .btn {
+    flex: 1;
+    padding: 13px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .btn:hover { background: #2a2a32; border-color: rgba(255,255,255,0.25); }
+  .btn:active { transform: scale(0.97); }
+  .btn-main {
+    background: var(--gold);
+    color: #0d0d0f;
+    border-color: var(--gold);
+    font-size: 15px;
+  }
+  .btn-main:hover { background: #fcd34d; border-color: #fcd34d; }
+
+  /* ── stats ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 4px; }
+  .stat-val { font-size: 20px; font-weight: 900; color: var(--text); }
+  .stat-val.gold { color: var(--gold); }
+
+  /* ── ranking ── */
+  .ranking-header {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .rank-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .rank-row:last-child { border-bottom: none; }
+  .rank-pos { font-size: 11px; color: var(--muted); min-width: 24px; font-family: 'DotGothic16', monospace; }
+  .rank-name { flex: 1; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-score { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .rank-icon { font-size: 16px; min-width: 20px; text-align: center; }
+  .rank-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+  /* ── footer note ── */
+  .footer-note {
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 20px;
+    line-height: 1.8;
+    font-family: 'DotGothic16', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- header -->
+  <div class="header">
+    <p class="header-eyebrow">DENSETSU CHALLENGE</p>
+    <h1>鉛筆コロコロ<br>伝説チャレンジ</h1>
+    <p class="header-sub">全問③を出せたら本物の伝説。<br>共通テストをノー勉で突破せよ。</p>
+    <span class="prob-badge" id="prob-badge">確率: (1/6)³⁵ ≈ 1.7 × 10⁻²⁷</span>
+  </div>
+
+  <!-- controls -->
+  <div class="panel">
+    <div class="controls">
+      <div class="ctrl-group">
+        <span class="ctrl-label">あなたの名前</span>
+        <input type="text" id="player-name" placeholder="名前を入力" maxlength="12">
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">問題数</span>
+        <select id="q-count" onchange="setup()">
+          <option value="10">10問（お試し）</option>
+          <option value="25">25問</option>
+          <option value="35" selected>35問（共通テスト）</option>
+          <option value="50">50問（鬼モード）</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- grid -->
+  <div class="panel" style="padding-bottom: 1rem;">
+    <div class="grid" id="grid"></div>
+
+    <!-- result -->
+    <div class="result-box" id="result-box">コロコロして運命を試そう</div>
+
+    <!-- buttons -->
+    <div class="btn-row">
+      <button class="btn btn-main" onclick="rollAll()">コロコロする！</button>
+      <button class="btn" onclick="resetGrid()" style="flex:0.4;">リセット</button>
+    </div>
+
+    <!-- stats -->
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">③の数</div>
+        <div class="stat-val" id="stat-hits">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">試行回数</div>
+        <div class="stat-val gold" id="stat-tries">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">最高記録</div>
+        <div class="stat-val" id="stat-best">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ranking -->
+  <div class="panel">
+    <div class="ranking-header">ランキング（このセッション）</div>
+    <div id="rank-list"><div class="rank-empty">まだ記録なし — まずコロコロしよう！</div></div>
+  </div>
+
+  <div class="footer-note">
+    全問③達成の確率: (1/6)^35 ≈ 1.7×10⁻²⁷<br>
+    宝くじ1等を3〜4回連続で当てるより難しい<br><br>
+    Made with Claude × 鉛筆コロコロ精神
+  </div>
+
+</div>
+
+<script>
+let N = 35, tries = 0, best = 0, records = [];
+
+function setup() {
+  N = parseInt(document.getElementById('q-count').value);
+  const cols = N <= 10 ? 5 : 7;
+  const grid = document.getElementById('grid');
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  grid.innerHTML = '';
+  for (let i = 0; i < N; i++) {
+    const d = document.createElement('div');
+    d.className = 'cell idle';
+    d.id = 'c' + i;
+    d.textContent = '?';
+    grid.appendChild(d);
+  }
+  const prob = Math.pow(1/6, N);
+  document.getElementById('prob-badge').textContent =
+    `確率: (1/6)^${N} ≈ ${prob.toExponential(1)}`;
+  document.getElementById('result-box').className = 'result-box';
+  document.getElementById('result-box').textContent = 'コロコロして運命を試そう';
+  document.getElementById('stat-hits').textContent = '—';
+}
+
+function rollAll() {
+  tries++;
+  document.getElementById('stat-tries').textContent = tries;
+  const delay = N > 25 ? 16 : 22;
+  for (let i = 0; i < N; i++) {
+    setTimeout(() => {
+      const val = Math.floor(Math.random() * 5) + 1;
+      const cell = document.getElementById('c' + i);
+      cell.textContent = val;
+      cell.className = 'cell rolling ' + (val === 3 ? 'hit' : 'miss');
+      if (i === N - 1) setTimeout(showResult, 150);
+    }, i * delay);
+  }
+}
+
+function showResult() {
+  let hits = 0;
+  for (let i = 0; i < N; i++) {
+    if (document.getElementById('c' + i).textContent === '3') hits++;
+  }
+  document.getElementById('stat-hits').textContent = hits + ' / ' + N;
+  if (hits > best) {
+    best = hits;
+    document.getElementById('stat-best').textContent = best;
+  }
+  const rb = document.getElementById('result-box');
+  const pct = hits / N;
+  if (hits === N) {
+    rb.className = 'result-box legend';
+    rb.textContent = '🎉 全問③達成！！あなたは本物の伝説です！！';
+  } else if (pct >= 0.8) {
+    rb.className = 'result-box great';
+    rb.textContent = '🔥 ' + hits + '問③！神がかり的！あと少し…！';
+  } else if (pct >= 0.5) {
+    rb.className = 'result-box ok';
+    rb.textContent = '😅 ' + hits + '問③。なかなか！もう一回！';
+  } else {
+    rb.className = 'result-box fail';
+    rb.textContent = '😭 ' + hits + '問だけ③…現実は厳しい';
+  }
+  addRecord(hits);
+}
+
+function addRecord(hits) {
+  const name = document.getElementById('player-name').value.trim() || '名無し';
+  records.push({ name, hits, n: N });
+  records.sort((a, b) => b.hits - a.hits || b.n - a.n);
+  if (records.length > 10) records.length = 10;
+  renderRanking();
+}
+
+function renderRanking() {
+  const icons = ['👑','🥈','🥉'];
+  const list = document.getElementById('rank-list');
+  list.innerHTML = records.map((r, i) => {
+    const pct = Math.round(r.hits / r.n * 100);
+    return `<div class="rank-row">
+      <span class="rank-pos">${i + 1}</span>
+      <span class="rank-name">${esc(r.name)}</span>
+      <span class="rank-score">${r.hits}/${r.n}問 (${pct}%)</span>
+      <span class="rank-icon">${icons[i] || ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function resetGrid() {
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < N; i++) {
+    const c = document.getElementById('c' + i);
+    c.className = 'cell idle';
+    c.textContent = '?';
+  }
+  document.getElementById('result-box').className = 'result-box';
+  document.getElementById('result-box').textContent = 'コロコロして運命を試そう';
+  document.getElementById('stat-hits').textContent = '—';
+}
+
+setup();
+</script>
+</body>
+</html>
